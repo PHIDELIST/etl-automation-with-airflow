@@ -2,6 +2,8 @@ from airflow import DAG
 from datetime import datetime
 from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from airflow.models import Variable
+from airflow.operators.dummy_operator import DummyOperator
+from airflow.utils.trigger_rule import TriggerRule
 import os
 import boto3
 default_args= {
@@ -57,6 +59,14 @@ def check_athena_database(**kwargs):
         print("No Database Found")
         return "create_athena_database"
     
+def create_db(**kwargs):
+    print("creating the database if it does not exist")
+    ath = boto3.client('athena')
+    ath.start_query_execution(
+        QueryString='CREATE DATABASE IF NOT EXIST '+athena_db,
+        ResultConfiguration={'OutputLocation': 's3://{s3_dlake}/queries/'.format(s3_dlake=s3_dlake)},
+        WorkGroup="airflowauto-demo"
+    )
 
 check_athena_database = BranchPythonOperator(
     task_id='check_athena_database',
@@ -65,3 +75,27 @@ check_athena_database = BranchPythonOperator(
     retries=1,
     dag=dag,
 )
+skip_athena_database_creation = DummyOperator(
+    task_id="skip_athena_database_creation",
+    trigger_rule=TriggerRule.NONE_FAILED,
+    dag=dag,
+)
+
+create_athena_database = PythonOperator (
+    task_id='create_athena_database',
+	provide_context=True,
+	python_callable=create_db,
+	dag=dag
+    )
+
+athena_database_checks_done = DummyOperator(
+    task_id="athena_database_checks_done",
+    trigger_rule=TriggerRule.NONE_FAILED,
+    dag=dag,
+)
+
+disp_variables >> check_athena_database
+
+check_athena_database >> skip_athena_database_creation >> athena_database_checks_done
+
+check_athena_database >> create_athena_database
