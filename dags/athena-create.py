@@ -46,7 +46,9 @@ disp_variables = PythonOperator (
 	)
 
 def check_athena_database(**kwargs):
-    ath = boto3.client('athena',region_name='us-east-1')
+    ath = boto3.client('athena',region_name='us-east-1',
+                       aws_access_key_id=aws_access_key_id,
+                       aws_secret_access_key=aws_secret_access_key)
     try:
         response = ath.get_database(
             CatalogName='AwsDataCatalog',
@@ -61,12 +63,15 @@ def check_athena_database(**kwargs):
     
 def create_db(**kwargs):
     print("creating the database if it does not exist")
-    ath = boto3.client('athena',region_name='us-east-1')
+    ath = boto3.client('athena', region_name='us-east-1',
+                       aws_access_key_id=aws_access_key_id,
+                       aws_secret_access_key=aws_secret_access_key)
     ath.start_query_execution(
-        QueryString='CREATE DATABASE IF NOT EXIST '+athena_db,
-        ResultConfiguration={'OutputLocation': 's3://{s3_dlake}/queries/'.format(s3_dlake=s3_dlake)},
-        WorkGroup="airflowauto-demo"
+        QueryString=f'CREATE DATABASE IF NOT EXISTS athena_db',
+        ResultConfiguration={'OutputLocation': 's3://globalphidelist.tech/queries/'.format(s3_dlake=s3_dlake)},
+        WorkGroup="primary"
     )
+
 
 check_athena_database = BranchPythonOperator(
     task_id='check_athena_database',
