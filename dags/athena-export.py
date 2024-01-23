@@ -1,7 +1,7 @@
 from airflow import DAG, settings, secrets
 from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators import HttpSensor, S3KeySensor
+# from airflow.operators import HttpSensor, S3KeySensor
 from airflow.contrib.operators.aws_athena_operator import AWSAthenaOperator
 from airflow.contrib.secrets.aws_secrets_manager import SecretsManagerBackend
 from airflow.contrib.hooks.aws_hook import AwsHook
@@ -205,6 +205,8 @@ export_athena_scifi_table = AWSAthenaOperator(
     workgroup = "airflow-demo", 
     database=athena_db,
     sleep_time = 60,
+    region='us-east-1',
+    aws_conn_id='aws-default',
     output_location='s3://'+s3_dlake+"/"+athena_output+'export_athena_scifi_table'
     )
 
